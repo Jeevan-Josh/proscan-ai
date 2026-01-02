@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ProScan | AI Resume Intelligence</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://unpkg.com/lucide@latest"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+        <style>
+            :root{--bg:#0f172a;--card:#0b1220;--accent:#2563eb;--glass-border:rgba(255,255,255,0.04)}
+            html,body{height:100%}
+            body{font-family:'Plus Jakarta Sans',sans-serif;background:linear-gradient(180deg,#0b1220 0%, #071035 60%);color:#e6eef8}
+            .glass{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));backdrop-filter:blur(8px);border:1px solid var(--glass-border);transition:transform .28s ease, box-shadow .28s ease}
+            .accent{background:linear-gradient(90deg,var(--accent),#7c3aed)}
+            .drop-hover{transition:all .25s ease}
+            .drop-hover:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(8,15,35,.6)}
+            .pulse{animation:pulse 1.8s infinite}
+            @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.01)}100%{transform:scale(1)}}
+
+            /* entry animations */
+            .fade-in{opacity:0;transform:translateY(8px);transition:opacity .5s ease, transform .5s cubic-bezier(.2,.9,.2,1)}
+            .fade-in.visible{opacity:1;transform:none}
+            .slide-up{opacity:0;transform:translateY(18px);transition:opacity .6s ease, transform .6s cubic-bezier(.2,.9,.2,1)}
+            .slide-up.visible{opacity:1;transform:none}
+
+            /* button/interaction */
+            button{transition:transform .12s ease, box-shadow .12s ease}
+            button:active{transform:translateY(1px) scale(.998)}
+            .btn-press{transform:translateY(1px) scale(.998)}
+
+            /* dropzone interactions */
+            #dropZone.dragover{border-color:rgba(124,58,237,0.9);box-shadow:0 8px 30px rgba(124,58,237,0.12);transform:translateY(-6px)}
+
+            /* animated keyword reveal */
+            .kw{opacity:0;transform:translateY(6px) scale(.98);transition:opacity .32s ease, transform .32s cubic-bezier(.2,.9,.2,1)}
+            .kw.visible{opacity:1;transform:none}
+
+            /* gauge glow */
+            #ring{filter:drop-shadow(0 6px 14px rgba(37,99,235,.18));transition:stroke-dashoffset 1.2s cubic-bezier(.2,.9,.2,1)}
+
+            .score-count{transition:all .9s cubic-bezier(.2,.9,.2,1);}
+        </style>
+    </head>
+    <body>
+        <header class="py-8">
+            <div class="max-w-6xl mx-auto px-6 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl accent flex items-center justify-center shadow-2xl">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15 8H9L12 2Z" fill="#fff"/></svg>
+                    </div>
+                    <div>
+                        <div class="text-lg font-extrabold tracking-tight">ProScan <span class="text-slate-200 opacity-90">AI</span></div>
+                        <div class="text-xs text-slate-300">Resume intelligence that hires faster</div>
+                    </div>
+                </div>
+                <nav class="hidden md:flex gap-6 text-sm text-slate-300">
+                    <a class="hover:text-white" href="#">Product</a>
+                    <a class="hover:text-white" href="#">Customers</a>
+                    <a class="hover:text-white" href="#">Docs</a>
+                    <a class="hover:text-white" href="#">Sign in</a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <!-- Left: Upload & Form (Hero + Benefits) -->
+                <section class="lg:col-span-7">
+                    <div class="glass rounded-3xl p-10 drop-hover">
+                        <div class="flex items-start gap-8">
+                            <div class="flex-1">
+                                <h1 class="text-3xl md:text-4xl font-extrabold mb-2">Get a resume score that hiring managers trust</h1>
+                                <p class="text-slate-300 mb-6 max-w-xl">Instantly evaluate ATS compatibility, highlight missing keywords, and get concise editing tips to improve interview invite rates.</p>
+
+                                <form id="resumeForm" class="space-y-6">
+                                    <label for="resume" id="dropZone" class="relative flex items-center gap-4 p-6 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:border-white transition-colors bg-gradient-to-b from-black/5 to-black/3">
+                                        <input id="resume" name="resume" type="file" accept="application/pdf" class="absolute inset-0 opacity-0 cursor-pointer" required aria-label="Upload resume PDF">
+                                        <div class="w-14 h-14 bg-slate-800 rounded-lg flex items-center justify-center">
+                                            <i data-lucide="upload-cloud" class="w-8 h-8 text-slate-300"></i>
+                                        </div>
+                                        <div>
+                                            <div id="fileNameDisplay" class="font-semibold">Drop your resume PDF here or click to browse</div>
+                                            <div class="text-xs text-slate-400 mt-1">PDF only • We parse your file locally for fast, private results.</div>
+                                        </div>
+                                        <div class="ml-auto text-xs px-3 py-1 rounded-full bg-slate-800 text-slate-300">PDF</div>
+                                    </label>
+
+                                    <textarea id="jobDesc" name="jobDesc" rows="5" placeholder="Paste the Job Description here (focus on responsibilities & requirements)" class="w-full bg-transparent border border-slate-700 rounded-xl p-4 text-slate-100 placeholder:text-slate-400 focus:outline-none" aria-label="Job description"></textarea>
+
+                                    <div class="flex gap-3">
+                                        <button type="submit" class="flex-1 py-3 rounded-xl font-bold accent text-white shadow-2xl">Analyze Resume</button>
+                                        <button type="button" id="sampleBtn" class="px-4 py-3 rounded-xl border border-slate-700 text-slate-200">Try sample</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div class="w-64 hidden md:block">
+                                <div class="bg-gradient-to-b from-white/3 to-white/2 rounded-2xl p-4 text-left">
+                                    <p class="text-xs uppercase text-slate-400 font-bold">Why ProScan</p>
+                                    <ul class="mt-3 text-sm text-slate-300 space-y-2">
+                                        <li>• ATS-focused keyword detection</li>
+                                        <li>• Actionable impact-based edits</li>
+                                        <li>• Fast, local parsing for privacy</li>
+                                    </ul>
+                                    <div class="mt-4 text-xs text-slate-400">Trusted by hiring teams and devs for fast iteration.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="glass rounded-xl p-4 text-center">
+                            <div class="text-2xl font-extrabold">Fast</div>
+                            <div class="text-xs text-slate-400">60s average analysis</div>
+                        </div>
+                        <div class="glass rounded-xl p-4 text-center">
+                            <div class="text-2xl font-extrabold">Private</div>
+                            <div class="text-xs text-slate-400">Local PDF parsing</div>
+                        </div>
+                        <div class="glass rounded-xl p-4 text-center">
+                            <div class="text-2xl font-extrabold">Practical</div>
+                            <div class="text-xs text-slate-400">Edit suggestions you can apply now</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Right: Results (sticky) -->
+                <aside class="lg:col-span-5 space-y-6 sticky top-6">
+                    <div class="glass rounded-3xl p-6 text-center">
+                        <div id="loading" class="hidden absolute inset-0 bg-black/40 z-10 flex items-center justify-center rounded-3xl">
+                            <svg class="animate-spin h-12 w-12 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                        </div>
+
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold">Match Score</h3>
+                            <div class="text-xs text-slate-400">ATS readiness</div>
+                        </div>
+
+                        <div class="relative w-44 h-44 mx-auto mb-4">
+                            <svg class="-rotate-90 w-full h-full" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="42" stroke="#071029" stroke-width="10" fill="none"/>
+                                <circle id="ring" cx="50" cy="50" r="42" stroke="url(#g)" stroke-width="10" stroke-linecap="round" fill="none" stroke-dasharray="264" stroke-dashoffset="264"></circle>
+                                <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#2563eb"/></linearGradient></defs>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center text-4xl font-extrabold" id="score">—</div>
+                        </div>
+
+                        <div class="flex gap-3 justify-center mb-3">
+                            <button id="exportBtn" class="px-3 py-2 rounded-lg border border-slate-700 text-sm text-slate-200">Export PDF</button>
+                            <button id="improveBtn" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">Get edit tips</button>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-700">
+                            <div><p class="text-[10px] font-bold text-slate-400 uppercase">KEYWORDS</p><p id="keyS" class="font-bold">—</p></div>
+                            <div><p class="text-[10px] font-bold text-slate-400 uppercase">IMPACT</p><p id="impS" class="font-bold">—</p></div>
+                            <div><p class="text-[10px] font-bold text-slate-400 uppercase">FORMAT</p><p id="readS" class="font-bold">—</p></div>
+                        </div>
+                    </div>
+
+                    <div id="output" class="glass rounded-2xl p-6 min-h-[220px]">
+                        <p class="text-slate-300 italic text-center py-12">Upload a resume to get a prioritized list of improvements and target keywords.</p>
+                    </div>
+                </aside>
+            </div>
+        </main>
+
+        <footer class="max-w-6xl mx-auto px-6 py-8 text-center text-slate-400 text-sm">
+            Built with ♥ · ProScan AI — small local demo
+        </footer>
+
+        <script>
+            lucide.createIcons();
+            const resumeInput = document.getElementById('resume');
+            const fileNameDisplay = document.getElementById('fileNameDisplay');
+            const form = document.getElementById('resumeForm');
+            const output = document.getElementById('output');
+            const ring = document.getElementById('ring');
+            const loading = document.getElementById('loading');
+
+            // Utilities: easing and animation helpers
+            function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+
+            function animateGauge(target){
+                const circumference = 264;
+                const start = parseFloat(ring.style.strokeDashoffset) || circumference;
+                const end = circumference - (Math.max(0, Math.min(100, target))/100) * circumference;
+                const duration = 1100;
+                let startTime = null;
+                requestAnimationFrame(function step(ts){
+                    if(!startTime) startTime = ts;
+                    const elapsed = ts - startTime;
+                    const t = Math.min(1, elapsed / duration);
+                    const v = start + (end - start) * easeOutCubic(t);
+                    ring.style.strokeDashoffset = v;
+                    if(elapsed < duration) requestAnimationFrame(step);
+                });
+            }
+
+            function animateCounter(el, start, end, duration=900){
+                let startTime = null;
+                requestAnimationFrame(function step(ts){
+                    if(!startTime) startTime = ts;
+                    const elapsed = ts - startTime;
+                    const t = Math.min(1, elapsed/duration);
+                    const v = Math.round(start + (end-start) * easeOutCubic(t));
+                    el.textContent = v + '%';
+                    if(elapsed < duration) requestAnimationFrame(step);
+                });
+            }
+
+            // small reveal helper for staggered items
+            function revealStagger(parentSelector, childSelector, delay=80){
+                const parent = document.querySelector(parentSelector);
+                if(!parent) return;
+                const items = parent.querySelectorAll(childSelector);
+                items.forEach((it, i)=>{
+                    setTimeout(()=> it.classList.add('visible'), i*delay);
+                });
+            }
+
+            // Dropzone interactions
+            const dropZone = document.getElementById('dropZone');
+            ['dragenter','dragover'].forEach(evt=> dropZone.addEventListener(evt, (e)=>{ e.preventDefault(); dropZone.classList.add('dragover'); }));
+            ['dragleave','drop'].forEach(evt=> dropZone.addEventListener(evt, ()=> dropZone.classList.remove('dragover')));
+
+            resumeInput.addEventListener('change', () => {
+                if (resumeInput.files[0]) fileNameDisplay.textContent = resumeInput.files[0].name;
+            });
+
+            function copyToClipboard(text, el){
+                navigator.clipboard.writeText(text);
+                const original = el.innerHTML; el.innerHTML = `<i data-lucide="check" class="w-3 h-3"></i> Copied`;
+                lucide.createIcons(); setTimeout(()=>{el.innerHTML=original; lucide.createIcons();},1500);
+            }
+
+            form.addEventListener('submit', async (e)=>{
+                e.preventDefault(); loading.classList.remove('hidden');
+                const fd = new FormData(); fd.append('resume', resumeInput.files[0]); fd.append('jobDesc', document.getElementById('jobDesc').value);
+                try{
+                    const res = await fetch('/analyze',{method:'POST', body:fd});
+                    const data = await res.json();
+
+                    // animated gauge + counter
+                    animateGauge(data.ats_score);
+                    animateCounter(document.getElementById('score'), 0, data.ats_score);
+                    document.getElementById('keyS').textContent = data.sub_scores.keywords + '%';
+                    document.getElementById('impS').textContent = data.sub_scores.impact + '%';
+                    document.getElementById('readS').textContent = data.sub_scores.readability + '%';
+
+                    // build strengths/weaknesses/keywords safely with animation classes
+                    const strengths = data.strengths.map(s=>`<div class="p-3 bg-green-50 border border-green-100 rounded-xl text-green-800 slide-up">${s}</div>`).join('');
+                    const weaknesses = data.weaknesses.map(w=>`<div class="p-3 bg-amber-50 border border-amber-100 rounded-xl text-amber-800 slide-up">${w}</div>`).join('');
+                    const keywords = data.missing_keywords.map(k=>`<button onclick="copyToClipboard('${k}', this)" class="px-3 py-1.5 bg-transparent border border-slate-700 rounded-lg text-xs font-bold hover:border-white kw">${k}</button>`).join(' ');
+
+                    output.innerHTML = `
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Analysis Results</h4>
+                                <div class="space-y-2 results-list">
+                                    ${strengths}
+                                    ${weaknesses}
+                                </div>
+                            </div>
+                            <div class="pt-4 border-t border-slate-700">
+                                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Target Keywords</h4>
+                                <div class="flex flex-wrap gap-2 keywords-wrap">${keywords}</div>
+                            </div>
+                        </div>
+                    `;
+                    lucide.createIcons();
+
+                    // reveal animations (staggered)
+                    setTimeout(()=>{
+                        document.querySelectorAll('.slide-up').forEach((el,i)=> setTimeout(()=> el.classList.add('visible'), i*70));
+                        revealStagger('.keywords-wrap', '.kw', 90);
+                    }, 120);
+
+                }catch(err){ alert('Analysis failed. Please try again.'); console.error(err); }
+                finally{ setTimeout(()=> loading.classList.add('hidden'), 250); }
+            });
+
+            // sample button helper (fills with demo text)
+            document.getElementById('sampleBtn').addEventListener('click', ()=>{
+                document.getElementById('jobDesc').value = 'Looking for a Software Engineer with experience in Python, AWS, REST APIs, Docker, and Agile.';
+                document.getElementById('jobDesc').focus();
+            });
+
+            // Improve entrance: reveal main blocks
+            window.addEventListener('load', ()=>{
+                document.querySelectorAll('.fade-in').forEach((el,i)=> setTimeout(()=> el.classList.add('visible'), i*80));
+                document.querySelectorAll('.glass').forEach((el,i)=> setTimeout(()=> el.classList.add('visible'), i*40));
+            });
+        </script>
+    </body>
+</html>
