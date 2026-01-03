@@ -13,7 +13,7 @@ except ImportError:
 app = Flask(__name__)
 
 # ================== CONFIGURATION ==================
-API_KEY = "AIzaSyDaYbQoMqGqmbv1bWTBQeCOHJvrgbSvDX8"
+API_KEY = "YOUR_API_KEY_HERE"
 client = None
 
 if GEMINI_AVAILABLE:
@@ -122,4 +122,5 @@ def analyze():
     return jsonify(local_ats_engine(resume_text, job_desc))
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8080)
+    # Disable the reloader to avoid the development server restarting unexpectedly
+    app.run(debug=True, port=8080, use_reloader=False)
