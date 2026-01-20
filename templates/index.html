@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>ATS Resume Checker</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body>
+        <header class="bg-white border-b">
+            <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+                <div>
+                    <h1 class="text-indigo-700 text-lg font-semibold">ATS Resume Checker</h1>
+                    <p class="text-sm text-gray-500">Optimize your resume for applicant tracking systems</p>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-6xl mx-auto px-6 grid gap-8 md:grid-cols-[1fr_380px] mt-6 pb-10 items-start">
+            <section class="bg-white rounded-2xl shadow p-6">
+                <h3 class="text-lg font-semibold">Resume Upload</h3>
+                <p class="text-sm text-gray-500 mt-1">Upload a PDF resume to get an ATS compatibility score and suggestions.</p>
+
+                <form id="analyze-form" method="post" action="/analyze" enctype="multipart/form-data" class="mt-4">
+                    <label for="resume-upload" class="block border-2 border-dashed border-indigo-200 rounded-lg p-5 bg-gradient-to-b from-indigo-50 to-white hover:border-indigo-300 cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <svg class="w-10 h-10 text-indigo-600" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 10l5-5 5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <div>
+                                <div class="font-medium text-slate-900">Drag & drop your PDF here</div>
+                                <div class="text-sm text-gray-500">Only PDF accepted. Max 5MB.</div>
+                            </div>
+                        </div>
+                        <input id="resume-upload" name="resume" type="file" accept="application/pdf" class="sr-only" required />
+                    </label>
+
+                    <div id="selected-file" class="mt-3 bg-slate-50 border border-slate-100 rounded-lg p-3 text-sm hidden">
+                        <div id="selected-file-name" class="font-medium">No file selected</div>
+                        <div id="selected-file-size" class="text-xs text-gray-500">—</div>
+                        <div id="selected-file-status" class="mt-2 text-xs text-green-600 hidden">File accepted — ready to analyze</div>
+                        <div id="selected-file-error" class="mt-2 text-xs text-red-600 hidden"></div>
+                    </div>
+
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium">Job Description</h4>
+                        <p class="text-xs text-gray-500">Paste the job posting or the role requirements here — responsibilities, required skills, and qualifications. Minimum 30 characters.</p>
+                        <textarea id="job_description" name="job_description" rows="6" class="w-full border rounded-lg p-3 text-sm resize-y" placeholder="Paste job description here..."></textarea>
+                        <div class="flex justify-end text-xs text-gray-400 mt-1"><span id="jd-count">0</span> / 2000</div>
+                    </div>
+
+                    <div class="mt-4 flex gap-3">
+                        <button id="analyze-btn" type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium">Analyze</button>
+                        <button id="reset-btn" type="button" class="px-4 py-2 border rounded-lg text-indigo-700">Reset</button>
+                    </div>
+                </form>
+            </section>
+
+            <aside id="insights" class="bg-white rounded-2xl shadow p-6">
+                <h3 class="text-lg font-semibold">ATS Score</h3>
+                <div id="score-area" class="mt-4">
+                    <div class="text-sm text-gray-500">No analysis yet. Upload a resume and paste the job description, then click Analyze.</div>
+                </div>
+            </aside>
+        </main>
+
+        <footer class="site-footer text-center p-6 text-sm text-gray-500">
+            ATS Resume Checker – Built for Job Seekers
+        </footer>
+
+    <script>
+        const form = document.getElementById('analyze-form');
+        const resetBtn = document.getElementById('reset-btn');
+        const scoreArea = document.getElementById('score-area');
+        const fileInput = document.getElementById('resume-upload');
+        const selectedFile = document.getElementById('selected-file');
+        const selectedName = document.getElementById('selected-file-name');
+        const selectedSize = document.getElementById('selected-file-size');
+        const selectedStatus = document.getElementById('selected-file-status');
+        const selectedError = document.getElementById('selected-file-error');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const jd = document.getElementById('job_description');
+        const jdCount = document.getElementById('jd-count');
+
+            function humanFileSize(size) {
+                if (size === 0) return '0 B';
+                const i = Math.floor(Math.log(size) / Math.log(1024));
+                return (size / Math.pow(1024, i)).toFixed(1) * 1 + ' ' + ['B','KB','MB','GB'][i];
+            }
+
+            fileInput.addEventListener('change', () => {
+                selectedError.classList.add('hidden');
+                const f = fileInput.files[0];
+                if (!f) {
+                    selectedFile.classList.add('hidden');
+                    analyzeBtn.disabled = true;
+                    return;
+                }
+                // Validate type and size
+                if (f.type !== 'application/pdf' && !f.name.toLowerCase().endsWith('.pdf')) {
+                    selectedError.innerText = 'Invalid file type. Please select a PDF.';
+                    selectedError.classList.remove('hidden');
+                    selectedStatus.classList.add('hidden');
+                    analyzeBtn.disabled = true;
+                } else if (f.size > 5 * 1024 * 1024) {
+                    selectedError.innerText = 'File too large. Maximum is 5 MB.';
+                    selectedError.classList.remove('hidden');
+                    selectedStatus.classList.add('hidden');
+                    analyzeBtn.disabled = true;
+                } else {
+                    selectedFile.classList.remove('hidden');
+                    selectedName.innerText = f.name;
+                    selectedSize.innerText = humanFileSize(f.size);
+                    selectedStatus.classList.remove('hidden');
+                    selectedError.classList.add('hidden');
+                }
+                updateAnalyzeState();
+            });
+
+            function updateAnalyzeState() {
+                const hasFile = fileInput.files && fileInput.files.length > 0;
+                const jdOk = jd && jd.value && jd.value.trim().length >= 30;
+                // require both file and job description for JD-mode
+                analyzeBtn.disabled = !(hasFile && jdOk);
+            }
+
+            if (jd) {
+                jd.addEventListener('input', () => {
+                    jdCount.innerText = jd.value.length;
+                    updateAnalyzeState();
+                });
+            }
+
+            resetBtn.addEventListener('click', () => {
+                form.reset();
+                scoreArea.innerHTML = '<div class="text-sm text-gray-500">No analysis yet. Upload a resume and paste the job description, then click Analyze.</div>';
+                selectedFile.classList.add('hidden');
+                selectedError.classList.add('hidden');
+                selectedStatus.classList.add('hidden');
+                analyzeBtn.disabled = true;
+            });
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                scoreArea.innerHTML = '<div class="text-sm text-gray-500">Analyzing…</div>';
+
+                const formData = new FormData(form);
+
+                try {
+                    const res = await fetch('/analyze', { method: 'POST', body: formData });
+                    if (!res.ok) {
+                        const err = await res.json().catch(()=>({error:'Server error'}));
+                        scoreArea.innerHTML = `<div class="text-sm text-red-600">${err.error || 'Analysis failed'}</div>`;
+                        return;
+                    }
+
+                    const data = await res.json();
+                    renderResults(data);
+                } catch (err) {
+                    scoreArea.innerHTML = '<div class="text-sm text-red-600">Network error. Check console.</div>';
+                    console.error(err);
+                }
+            });
+
+            function renderResults(data) {
+                // If JD-specific fields exist, render JD-focused report
+                const hasJD = Object.prototype.hasOwnProperty.call(data, 'keyword_match_pct') || (data.missing_keywords && data.missing_keywords.length >= 0 && data.keyword_match_pct !== undefined);
+
+                if (hasJD) {
+                    // JD-mode report
+                    scoreArea.innerHTML = `
+                    <div class="mt-4 flex items-center gap-6">
+                        <div class="w-36 h-36 flex items-center justify-center">
+                            <svg viewBox="0 0 120 120" class="w-28 h-28">
+                                <circle cx="60" cy="60" r="54" stroke="#e6eef9" stroke-width="12" fill="none" />
+                                <circle cx="60" cy="60" r="54" stroke="#10b981" stroke-width="12" stroke-linecap="round" fill="none" transform="rotate(-90 60 60)" id="score-ring" />
+                                <foreignObject x="30" y="36" width="60" height="48">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="flex flex-col items-center justify-center text-center">
+                                        <div id="score-number" class="text-xl font-bold text-slate-900">${data.ats_score}</div>
+                                        <div class="text-xs text-gray-500">ATS Compatibility</div>
+                                    </div>
+                                </foreignObject>
+                            </svg>
+                        </div>
+                        <div class="text-sm text-gray-600 space-y-2">
+                            <div><strong>Keyword Match:</strong> ${data.keyword_match_pct}%</div>
+                            <div><strong>Missing Keywords:</strong> ${data.missing_keywords.length}</div>
+                            <div><strong>Formatting Issues:</strong> ${data.formatting_issues.length}</div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <h4 class="text-sm font-medium">Missing Keywords</h4>
+                    <ul class="list-disc list-inside text-sm text-gray-700 mt-2">
+                      ${data.missing_keywords && data.missing_keywords.length ? data.missing_keywords.map(k => `<li>${k}</li>`).join('') : '<li>None — good match!</li>'}
+                    </ul>
+
+                    <h4 class="text-sm font-medium mt-4">Formatting Issues</h4>
+                    <ul class="list-disc list-inside text-sm text-gray-700 mt-2">
+                      ${data.formatting_issues.length ? data.formatting_issues.map(i => `<li>${i}</li>`).join('') : '<li>No major issues detected.</li>'}
+                    </ul>
+
+                    <h4 class="text-sm font-medium mt-4">Suggestions</h4>
+                    <ul class="list-disc list-inside text-sm text-gray-700 mt-2">
+                      ${data.suggestions.length ? data.suggestions.map(s => `<li>${s}</li>`).join('') : '<li>No suggestions</li>'}
+                    </ul>
+                    `;
+                } else {
+                    // Resume-only report
+                    scoreArea.innerHTML = `
+                    <div class="mt-4 flex items-center gap-6">
+                        <div class="w-36 h-36 flex items-center justify-center">
+                            <svg viewBox="0 0 120 120" class="w-28 h-28">
+                                <circle cx="60" cy="60" r="54" stroke="#e6eef9" stroke-width="12" fill="none" />
+                                <circle cx="60" cy="60" r="54" stroke="#10b981" stroke-width="12" stroke-linecap="round" fill="none" transform="rotate(-90 60 60)" id="score-ring" />
+                                <foreignObject x="30" y="36" width="60" height="48">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="flex flex-col items-center justify-center text-center">
+                                        <div id="score-number" class="text-xl font-bold text-slate-900">${data.ats_score}</div>
+                                        <div class="text-xs text-gray-500">ATS Compatibility</div>
+                                    </div>
+                                </foreignObject>
+                            </svg>
+                        </div>
+                        <div class="text-sm text-gray-600 space-y-2">
+                            <div><strong>Keywords:</strong> ${data.keywords_pct}%</div>
+                            <div><strong>Skills:</strong> ${data.skills_pct}%</div>
+                            <div><strong>Formatting:</strong> ${data.formatting_pct}%</div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <h4 class="text-sm font-medium">Detected Skills</h4>
+                    <ul class="list-disc list-inside text-sm text-gray-700 mt-2">
+                        ${data.detected_skills && data.detected_skills.length ? data.detected_skills.map(s=>`<li>${s}</li>`).join('') : '<li>No skills detected</li>'}
+                    </ul>
+
+                    <h4 class="text-sm font-medium mt-4">Missing Skills</h4>
+                    <ul class="list-disc list-inside text-sm text-gray-700 mt-2">
+                        ${data.missing_skills && data.missing_skills.length ? data.missing_skills.map(s=>`<li>${s}</li>`).join('') : '<li>None detected</li>'}
+                    </ul>
+
+                    <h4 class="text-sm font-medium mt-4">Formatting Issues</h4>
+                    <ul class="list-disc list-inside text-sm text-gray-700 mt-2">
+                        ${data.formatting_issues.length ? data.formatting_issues.map(i => `<li>${i}</li>`).join('') : '<li>No major issues detected.</li>'}
+                    </ul>
+
+                    <h4 class="text-sm font-medium mt-4">Suggestions</h4>
+                    <ul class="list-disc list-inside text-sm text-gray-700 mt-2">
+                        ${data.suggestions.length ? data.suggestions.map(s => `<li>${s}</li>`).join('') : '<li>No suggestions</li>'}
+                    </ul>
+                    `;
+                }
+            }
+        </script>
